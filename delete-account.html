@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hesap Silme Talebi — Sudoku Ödül Festivali</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    line-height: 1.6;
+    color: #1f1f1f;
+    background: #ffffff;
+  }
+  header { border-bottom: 3px solid #512BD4; padding-bottom: 16px; margin-bottom: 24px; }
+  h1 { color: #3E1F73; font-size: 1.5rem; margin: 0 0 6px; }
+  .meta { color: #666; font-size: 0.92rem; }
+  .warning {
+    background: #FDECEA;
+    border: 1px solid #F5C6C3;
+    color: #611A15;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.92rem;
+    margin-bottom: 24px;
+  }
+  label { display: block; font-weight: 600; margin: 16px 0 6px; font-size: 0.9rem; }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  button {
+    width: 100%;
+    margin-top: 22px;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    background: #C62828;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  button.secondary {
+    background: transparent;
+    color: #666;
+    margin-top: 10px;
+    font-weight: 400;
+  }
+  #status {
+    margin-top: 18px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    display: none;
+  }
+  #status.success { display: block; background: #E8F5E9; color: #1B5E20; border: 1px solid #C8E6C9; }
+  #status.error { display: block; background: #FDECEA; color: #611A15; border: 1px solid #F5C6C3; }
+  a { color: #512BD4; }
+  footer { margin-top: 40px; font-size: 0.85rem; color: #888; text-align: center; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #141018; color: #EDEAF7; }
+    .meta { color: #B3ACC9; }
+    input[type="text"], input[type="password"] { background: #241A3D; border-color: #3E1F73; color: #EDEAF7; }
+    footer { color: #8A83A0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Hesap Silme Talebi</h1>
+  <div class="meta">Sudoku Ödül Festivali</div>
+</header>
+
+<p>
+  Uygulamayı telefonunuza yüklemeden de hesabınızı ve kişisel verilerinizi buradan
+  kalıcı olarak silebilirsiniz. Uygulama içinden silmek isterseniz: Profil menüsü →
+  "Hesabımı Sil".
+</p>
+
+<div class="warning">
+  ⚠️ Bu işlem <strong>geri alınamaz</strong>. Hesabınız, e-posta/kullanıcı adınız, ad-soyad,
+  telefon ve adres bilginiz kalıcı olarak silinir/anonimleştirilir. Oyun puanlarınız
+  kimliksizleştirilmiş şekilde sistemde kalabilir (sıralama tablosu bütünlüğü için) ancak
+  artık size ait olduğu anlaşılamaz.
+</div>
+
+<form id="deleteForm">
+  <label for="usernameOrEmail">Kullanıcı adı veya e-posta</label>
+  <input type="text" id="usernameOrEmail" required autocomplete="username" />
+
+  <label for="password">Şifre</label>
+  <input type="password" id="password" required autocomplete="current-password" />
+
+  <button type="submit" id="submitBtn">Hesabımı Kalıcı Olarak Sil</button>
+</form>
+
+<div id="status"></div>
+
+<footer>
+  Sorularınız için: <a href="mailto:yacsoft.play@gmail.com">yacsoft.play@gmail.com</a><br /><br />
+  <a href="index.html">← Gizlilik Politikasına Dön</a>
+</footer>
+
+<script>
+  const API_BASE = "https://sudoku-api-xxr1.onrender.com";
+  const form = document.getElementById("deleteForm");
+  const statusEl = document.getElementById("status");
+  const submitBtn = document.getElementById("submitBtn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const usernameOrEmail = document.getElementById("usernameOrEmail").value.trim();
+    const password = document.getElementById("password").value;
+
+    if (!confirm("Hesabınızı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.")) {
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "İşleniyor...";
+    statusEl.className = "";
+    statusEl.style.display = "none";
+
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/delete-account`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usernameOrEmail, password })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        statusEl.textContent = "✅ Hesabınız ve kişisel verileriniz başarıyla silindi.";
+        statusEl.className = "success";
+        form.reset();
+        form.style.display = "none";
+      } else {
+        const message = data.message || (data.errors ? data.errors.join(", ") : "Hesap silinemedi. Bilgilerinizi kontrol edip tekrar deneyin.");
+        statusEl.textContent = "❌ " + message;
+        statusEl.className = "error";
+      }
+    } catch (err) {
+      statusEl.textContent = "❌ Sunucuya ulaşılamadı: " + err.message;
+      statusEl.className = "error";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Hesabımı Kalıcı Olarak Sil";
+    }
+  });
+</script>
+
+</body>
+</html>
